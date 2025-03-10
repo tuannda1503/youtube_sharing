@@ -8,7 +8,6 @@ import { Repository } from 'typeorm';
 import { UserService } from '../user/user.service';
 import { User } from '../user/entity/user.entity';
 
-
 @Injectable()
 export class AuthService {
   private readonly saltRounds = 10;
@@ -16,7 +15,7 @@ export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
-    private readonly userService: UserService
+    private readonly userService: UserService,
   ) {}
 
   async signUp(signUpDto: SignUpDto): Promise<any> {
@@ -33,23 +32,30 @@ export class AuthService {
           sub: user.id,
           email: user.email,
         }),
+        email,
       };
     } catch (error) {
       console.log(error);
     }
   }
 
-  async signIn(signInDto: SignInDto): Promise<{ access_token: string; email: string }> {
+  async signIn(
+    signInDto: SignInDto,
+  ): Promise<{ access_token: string; email: string }> {
     const { email, password } = signInDto;
     const user = await this.userService.findOne(email);
-    const payload = { sub: user.id, email: user.email };
-    const pass = await bcrypt.compare(password, user.password);
-    if (!pass) {
-      throw new UnauthorizedException();
+    if (user) {
+      const payload = { sub: user.id, email: user.email };
+      const pass = await bcrypt.compare(password, user.password);
+      if (!pass) {
+        throw new UnauthorizedException();
+      }
+      return {
+        access_token: await this.jwtService.signAsync(payload),
+        email,
+      };
+    } else {
+      await this.signUp(signInDto);
     }
-    return {
-      access_token: await this.jwtService.signAsync(payload),
-      email,
-    };
   }
 }
