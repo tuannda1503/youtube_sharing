@@ -21,4 +21,18 @@ describe('AppController (e2e)', () => {
       .expect(200)
       .expect('Hello World!');
   });
+
+  it('/auth/sign-up (POST)', async () => {
+    const signUpDto = {
+      email: 'test@example.com',
+      password: 'testpassword',
+    };
+
+    const response = await request(app.getHttpServer())
+      .post('/auth/sign-up')
+      .send(signUpDto)
+      .expect(201);
+
+    expect(response.statusCode).toEqual(201);
+  })
 });

@@ -6,6 +6,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { UserModule } from './user/user.module';
+import { MovieModule } from './movie/movie.module';
+import { GatewayModule } from './gateway/gateway.module';
 
 @Module({
   imports: [
@@ -25,7 +27,9 @@ import { UserModule } from './user/user.module';
       inject: [ConfigService],
     }),
     AuthModule,
-    UserModule
+    UserModule,
+    MovieModule,
+    GatewayModule
   ],
   controllers: [AppController],
   providers: [AppService],
