@@ -13,6 +13,9 @@ export const getEnvConfig = () => ({
     database: process.env.DATABASE || 'mydb',
     entities: [join(process.cwd(), 'dist/**/*.entity.js')],
   },
+  youtube: {
+    youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
+  },
   isLocal: (process.env.NODE_ENV || 'local') === 'local',
 });
 

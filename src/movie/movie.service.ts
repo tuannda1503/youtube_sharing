@@ -5,7 +5,6 @@ import { Repository } from 'typeorm';
 import axios from 'axios';
 import { ShareMovieDto } from './dto/share-movie.dto';
 import { ShareGateway } from '../gateway/gateway';
-
 @Injectable()
 export class MovieService {
   constructor(

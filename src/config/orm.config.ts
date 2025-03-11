@@ -1,5 +1,7 @@
 import { DataSourceOptions, DataSource } from 'typeorm';
 import { getEnvConfig } from './configurations';
+import { User } from '../user/entity/user.entity';
+import { Movie } from '../movie/entity/movie.entity';
 
 const envConfig = getEnvConfig();
 
@@ -10,7 +12,7 @@ export const ormConfig: DataSourceOptions = {
   username: envConfig.mysql.username,
   password: envConfig.mysql.password,
   database: envConfig.mysql.database,
-  entities: envConfig.mysql.entities,
+  entities: [User, Movie],
   synchronize: false,
 };
 

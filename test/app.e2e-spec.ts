@@ -22,17 +22,12 @@ describe('AppController (e2e)', () => {
       .expect('Hello World!');
   });
 
-  it('/auth/sign-up (POST)', async () => {
-    const signUpDto = {
-      email: 'test@example.com',
-      password: 'testpassword',
-    };
-
-    const response = await request(app.getHttpServer())
-      .post('/auth/sign-up')
-      .send(signUpDto)
+  it('/auth/login (POST)', () => {
+    return request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'admin@gmail.com', password: '123456' })
+      .set('Content-Type', 'application/json')
+      .set('Accept', 'application/json')
       .expect(201);
-
-    expect(response.statusCode).toEqual(201);
-  })
+  });
 });
