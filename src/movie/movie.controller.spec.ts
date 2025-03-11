@@ -1,13 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MovieController } from './movie.controller';
 import { MovieService } from './movie.service';
-import { AuthGuard } from '../auth/auth.guard';
-import { ShareMovieDto } from './dto/share-movie.dto';
 import { Movie } from './entity/movie.entity';
-import { UnauthorizedException } from '@nestjs/common';
+import { ShareMovieDto } from './dto/share-movie.dto';
+import { AuthGuard } from '../auth/auth.guard';
+import { JwtService } from '@nestjs/jwt';
+import { Reflector } from '@nestjs/core';
 
 describe('MovieController', () => {
-  let controller: MovieController;
+  let movieController: MovieController;
   let movieService: MovieService;
 
   const mockMovieService = {
@@ -23,57 +24,70 @@ describe('MovieController', () => {
           provide: MovieService,
           useValue: mockMovieService,
         },
+        AuthGuard,
+        JwtService,
+        Reflector,
       ],
     }).compile();
 
-    controller = module.get<MovieController>(MovieController);
+    movieController = module.get<MovieController>(MovieController);
     movieService = module.get<MovieService>(MovieService);
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
   });
 
   describe('findAll', () => {
     it('should return an array of movies', async () => {
-      const result: Movie[] = [{ id: 1, title: 'Inception' } as Movie];
-      jest.spyOn(movieService, 'find').mockResolvedValue(result);
+      const movies: Movie[] = [
+        { id: 1, title: 'Movie 1', url: 'https://example.com', userId: 123 },
+      ];
+      jest.spyOn(movieService, 'find').mockResolvedValue(movies);
 
-      expect(await controller.findAll()).toBe(result);
+      const result = await movieController.findAll();
+
+      expect(result).toEqual(movies);
+      expect(movieService.find).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle empty movie list', async () => {
-      jest.spyOn(movieService, 'find').mockResolvedValue([]);
+    it('should throw an error if movieService.find fails', async () => {
+      jest
+        .spyOn(movieService, 'find')
+        .mockRejectedValue(new Error('Database error'));
 
-      const result = await controller.findAll();
-      expect(result).toEqual([]);
+      await expect(movieController.findAll()).rejects.toThrow('Database error');
+      expect(movieService.find).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('shareMovie', () => {
-    it('should share a movie successfully when user is authenticated', async () => {
-      const req = { user: { sub: 1, email: 'test@example.com' } };
-      const dto: ShareMovieDto = { url: 'http://example.com', userId: req.user.sub, email: req.user.email };
+    it('should return true when a movie is shared successfully', async () => {
+      const reqMock = { user: { sub: 123, email: 'user@example.com' } };
+      const url = 'https://example.com/movie';
+      const shareDto: ShareMovieDto = {
+        url,
+        userId: 123,
+        email: 'user@example.com',
+      };
+
       jest.spyOn(movieService, 'shareMovie').mockResolvedValue(true);
 
-      const result = await controller.shareMovie(dto.url, req);
+      const result = await movieController.shareMovie(url, reqMock);
+
       expect(result).toBe(true);
-      expect(movieService.shareMovie).toHaveBeenCalledWith(dto);
+      expect(movieService.shareMovie).toHaveBeenCalledWith(shareDto);
+      expect(movieService.shareMovie).toHaveBeenCalledTimes(1);
     });
 
-    it('should throw UnauthorizedException if user is not authenticated', async () => {
-      const req = { user: null }; // Simulate unauthenticated user
-      const dto: ShareMovieDto = { url: 'http://example.com', userId: null, email: null };
+    it('should throw an error if movieService.shareMovie fails', async () => {
+      const reqMock = { user: { sub: 'user123', email: 'user@example.com' } };
+      const url = 'https://example.com/movie';
 
-      await expect(controller.shareMovie(dto.url, req)).rejects.toThrow(UnauthorizedException);
-    });
+      jest
+        .spyOn(movieService, 'shareMovie')
+        .mockRejectedValue(new Error('Failed to share movie'));
 
-    it('should handle errors when sharing a movie', async () => {
-      const req = { user: { sub: 1, email: 'test@example.com' } };
-      const dto: ShareMovieDto = { url: 'http://example.com', userId: req.user.sub, email: req.user.email };
-      jest.spyOn(movieService, 'shareMovie').mockRejectedValue(new Error('Error sharing movie'));
-
-      await expect(controller.shareMovie(dto.url, req)).rejects.toThrow(Error);
+      await expect(movieController.shareMovie(url, reqMock)).rejects.toThrow(
+        'Failed to share movie',
+      );
+      expect(movieService.shareMovie).toHaveBeenCalledTimes(2);
     });
   });
 });

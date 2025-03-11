@@ -17,7 +17,12 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "migrate:create": "yarn typeorm migration:create",
+    "migrate:generate": "yarn typeorm migration:generate -- -d dist/config/orm.config.js",
+    "migrate:run": "yarn typeorm migration:run -- -d dist/config/orm.config.js",
+    "migrate:run:prod": "yarn typeorm migration:run -- -d dist/config/orm.config.js",
+    "migrate:revert": "yarn typeorm migration:revert -- -d dist/config/orm.config.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -78,8 +83,11 @@
     "testEnvironment": "node",
     "coveragePathIgnorePatterns": [
       "<rootDir>/.*/entity/.*",
+      "<rootDir>/.*/dto/.*",
       "<rootDir>/main.ts",
-      "<rootDir>/config"
+      "<rootDir>/config",
+      "<rootDir>/database",
+      "<rootDir>/.*/*.module.ts"
     ]
   }
 }

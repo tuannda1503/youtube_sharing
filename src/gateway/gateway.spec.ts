@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 
 describe('ShareGateway', () => {
   let gateway: ShareGateway;
+  let mockServer: Server & { on: jest.Mock; emit: jest.Mock };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -11,10 +12,31 @@ describe('ShareGateway', () => {
     }).compile();
 
     gateway = module.get<ShareGateway>(ShareGateway);
+    mockServer = {
+      on: jest.fn(),
+      emit: jest.fn(),
+    } as unknown as Server & { on: jest.Mock; emit: jest.Mock };
+
+    gateway.server = mockServer;
   });
 
   it('should be defined', () => {
     expect(gateway).toBeDefined();
+  });
+
+  it('should log connection on module init', () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    gateway.onModuleInit();
+    expect(mockServer.on).toHaveBeenCalledWith('connect', expect.any(Function));
+    // Simulate a connection
+    const connectCallback = mockServer.on.mock.calls[0][1];
+    connectCallback({ id: 'test-socket-id' });
+
+    expect(consoleSpy).toHaveBeenCalledWith('test-socket-id');
+    expect(consoleSpy).toHaveBeenCalledWith('Connected to server');
+
+    consoleSpy.mockRestore();
   });
 
   it('should emit new message when receiving new message', () => {

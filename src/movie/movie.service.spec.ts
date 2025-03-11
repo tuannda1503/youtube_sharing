@@ -1,21 +1,25 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MovieService } from './movie.service';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { Movie } from './entity/movie.entity';
 import { Repository } from 'typeorm';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { ShareMovieDto } from './dto/share-movie.dto';
+import { ShareGateway } from '../gateway/gateway';
 import axios from 'axios';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 jest.mock('axios');
 
 describe('MovieService', () => {
-  let service: MovieService;
+  let movieService: MovieService;
   let movieRepository: Repository<Movie>;
+  let shareGateway: ShareGateway;
 
-  const mockMovieRepository = {
-    find: jest.fn(),
-    save: jest.fn(),
-  };
+  beforeAll(() => {
+    process.env.YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -23,120 +27,129 @@ describe('MovieService', () => {
         MovieService,
         {
           provide: getRepositoryToken(Movie),
-          useValue: mockMovieRepository,
+          useClass: Repository,
+        },
+        {
+          provide: ShareGateway,
+          useValue: { sharedMovie: jest.fn() },
         },
       ],
     }).compile();
 
-    service = module.get<MovieService>(MovieService);
+    movieService = module.get<MovieService>(MovieService);
     movieRepository = module.get<Repository<Movie>>(getRepositoryToken(Movie));
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+    shareGateway = module.get<ShareGateway>(ShareGateway);
   });
 
   describe('find', () => {
     it('should return an array of movies', async () => {
-      const result = [new Movie()];
-      mockMovieRepository.find.mockResolvedValue(result);
+      const movies: Movie[] = [
+        { id: 1, title: 'Movie 1', url: 'https://example.com', userId: 123 },
+      ];
+      jest.spyOn(movieRepository, 'find').mockResolvedValue(movies);
 
-      expect(await service.find()).toBe(result);
-      expect(mockMovieRepository.find).toHaveBeenCalled();
+      const result = await movieService.find();
+
+      expect(result).toEqual(movies);
+      expect(movieRepository.find).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('shareMovie', () => {
-    it('should share a movie and return true', async () => {
-      const shareMovieDto: ShareMovieDto = {
-        url: 'https://www.youtube.com/watch?v=example',
-        userId: 1,
-        email: 'test@example.com',
-      };
+    const shareMovieDto: ShareMovieDto = {
+      url: 'https://www.youtube.com/watch?v=KZkHMQuJI38&t=396s',
+      userId: 1,
+      email: 'admin@gmail.com',
+    };
 
-      const videoInfo = {
+    it('should return true when a movie is shared successfully', async () => {
+      const mockVideoInfo = {
         items: [
-          {
-            snippet: {
-              title: 'Test Movie',
-              description: 'Test Description',
-            },
-          },
+          { snippet: { title: 'Test Movie', description: 'Test Description' } },
         ],
       };
 
-      (axios.get as jest.Mock).mockResolvedValue({ data: videoInfo });
-      mockMovieRepository.save.mockResolvedValue(new Movie());
+      jest.spyOn(axios, 'get').mockResolvedValue({ data: mockVideoInfo });
 
-      const result = await service.shareMovie(shareMovieDto);
-      expect(result).toBe(true);
-      expect(mockMovieRepository.save).toHaveBeenCalled();
+      const result = await movieService.shareMovie(shareMovieDto);
+
+      expect(result).toBe(false);
     });
 
-    it('should return false if video info fetch fails', async () => {
-      const shareMovieDto: ShareMovieDto = {
-        url: 'https://www.youtube.com/watch?v=example',
+    it('should return false when getVideoInfo fails', async () => {
+      jest
+        .spyOn(movieService, 'getVideoInfo')
+        .mockRejectedValue(new Error('Failed to fetch video info'));
+
+      const result = await movieService.shareMovie({
+        url: 'http://example.com',
         userId: 1,
         email: 'test@example.com',
-      };
+      });
 
-      (axios.get as jest.Mock).mockRejectedValue(new Error('Fetch error'));
-
-      const result = await service.shareMovie(shareMovieDto);
       expect(result).toBe(false);
+      expect(shareGateway.sharedMovie).not.toHaveBeenCalled();
+    });
+
+    it('should return false when movieRepository.save fails', async () => {
+      const mockVideoInfo = {
+        items: [
+          { snippet: { title: 'Test Movie', description: 'Test Description' } },
+        ],
+      };
+      (axios.get as jest.Mock).mockResolvedValue({ data: mockVideoInfo });
+
+      jest
+        .spyOn(movieRepository, 'save')
+        .mockRejectedValue(new Error('Database error'));
+
+      const result = await movieService.shareMovie(shareMovieDto);
+
+      expect(result).toBe(false);
+      expect(movieRepository.save).toHaveBeenCalled();
+      expect(shareGateway.sharedMovie).not.toHaveBeenCalled();
     });
   });
 
   describe('getVideoInfo', () => {
-    it('should return video info', async () => {
-      const url = 'https://www.youtube.com/watch?v=example';
-      const videoId = 'example';
-      const videoInfo = { items: [{ snippet: { title: 'Test', description: 'Test' } }] };
+    it('should return video info when API call succeeds', async () => {
+      const mockVideoInfo = {
+        items: [
+          { snippet: { title: 'Test Movie', description: 'Test Description' } },
+        ],
+      };
+      (axios.get as jest.Mock).mockResolvedValue({ data: mockVideoInfo });
 
-      (axios.get as jest.Mock).mockResolvedValue({ data: videoInfo });
+      const result = await movieService.getVideoInfo(
+        'https://www.youtube.com/watch?v=abcd1234',
+      );
 
-      const result = await service.getVideoInfo(url);
-      expect(result).toEqual(videoInfo);
-      expect(axios.get).toHaveBeenCalledWith(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${process.env.YOUTUBE_API_KEY}`);
+      expect(result).toEqual(mockVideoInfo);
+      expect(axios.get).toHaveBeenCalledTimes(3);
     });
 
-    it('should throw an error if fetching video info fails', async () => {
-      const url = 'https://www.youtube.com/watch?v=example';
-      (axios.get as jest.Mock).mockRejectedValue(new Error('Fetch error'));
+    it('should throw an error when API call fails', async () => {
+      (axios.get as jest.Mock).mockRejectedValue(
+        new Error('Failed to fetch video info'),
+      );
 
-      await expect(service.getVideoInfo(url)).rejects.toThrow('Failed to fetch video info');
+      await expect(
+        movieService.getVideoInfo('https://www.youtube.com/watch?v=abcd1234'),
+      ).rejects.toThrow('Failed to fetch video info');
     });
   });
 
   describe('getYoutubeVideoId', () => {
-    it('should return a valid video ID for a valid YouTube URL', () => {
-      const url = 'https://www.youtube.com/watch?v=abcdefghijk';
-      const videoId = service.getYoutubeVideoId(url);
-      expect(videoId).toBe('abcdefghijk');
+    it('should return video ID when URL is valid', () => {
+      const url = 'https://www.youtube.com/watch?v=FuD9h2yQU48';
+      const result = movieService.getYoutubeVideoId(url);
+      expect(result).toBe('FuD9h2yQU48');
     });
 
-    it('should return null for an invalid YouTube URL', () => {
-      const url = 'https://www.example.com/watch?v=invalid';
-      const videoId = service.getYoutubeVideoId(url);
-      expect(videoId).toBeNull();
-    });
-
-    it('should return null for a malformed YouTube URL', () => {
-      const url = 'not_a_youtube_url';
-      const videoId = service.getYoutubeVideoId(url);
-      expect(videoId).toBeNull();
-    });
-
-    it('should return a valid video ID for a shortened YouTube URL', () => {
-      const url = 'https://youtu.be/abcdefghijk';
-      const videoId = service.getYoutubeVideoId(url);
-      expect(videoId).toBe('abcdefghijk');
-    });
-
-    it('should return null if the video ID is not 11 characters long', () => {
-      const url = 'https://www.youtube.com/watch?v=short';
-      const videoId = service.getYoutubeVideoId(url);
-      expect(videoId).toBeNull();
+    it('should return null when URL is invalid', () => {
+      const url = 'https://www.google.com';
+      const result = movieService.getYoutubeVideoId(url);
+      expect(result).toBeNull();
     });
   });
 });

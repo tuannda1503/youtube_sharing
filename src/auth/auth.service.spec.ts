@@ -1,8 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
-import { SignInDto } from './dto/sign-in.dto';
-import { SignUpDto } from './dto/sign-up.dto';
 import { UserService } from '../user/user.service';
 import { User } from '../user/entity/user.entity';
 import { Repository } from 'typeorm';
@@ -59,7 +57,7 @@ describe('AuthService', () => {
 
   describe('signUp', () => {
     it('should register a user successfully and return an access token', async () => {
-      const signUpDto: SignUpDto = { email: 'test@example.com', password: 'testpass' };
+      const signUpDto = { email: 'test@example.com', password: 'testpass' };
       const hashedPassword = await bcrypt.hash(signUpDto.password, 10);
       mockUserRepository.save.mockResolvedValue({ id: 1, email: signUpDto.email, password: hashedPassword });
 
@@ -73,39 +71,36 @@ describe('AuthService', () => {
     });
 
     it('should handle errors during user registration', async () => {
-      const signUpDto: SignUpDto = { email: 'test@example.com', password: 'testpass' };
+      const signUpDto = { email: 'test@example.com', password: 'testpass' };
       mockUserRepository.save.mockRejectedValue(new Error('Database error'));
 
       const result = await service.signUp(signUpDto);
-      expect(result).toBeUndefined(); // Ensure it returns undefined on error
+      expect(result).toBeUndefined();
     });
   });
 
   describe('signIn', () => {
     it('should sign in a user successfully and return an access token', async () => {
-      const signInDto: SignInDto = { email: 'test@example.com', password: 'testpass' };
+      const signInDto = { email: 'test@example.com', password: 'testpass' };
       const user = { id: 1, email: signInDto.email, password: await bcrypt.hash(signInDto.password, 10) };
       mockUserService.findOne.mockResolvedValue(user);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true);
 
       const result = await service.signIn(signInDto);
       expect(result).toHaveProperty('access_token', 'mocked_token');
-      expect(mockUserService.findOne).toHaveBeenCalledWith(signInDto.email);
-      expect(jwtService.signAsync).toHaveBeenCalledWith({ sub: user.id, email: user.email });
+      expect(jwtService.signAsync).toHaveBeenCalledWith({ sub: 1, email: signInDto.email });
     });
 
-    it('should throw an error if user is not found', async () => {
-      const signInDto: SignInDto = { email: 'test@example.com', password: 'testpass' };
-      mockUserService.findOne.mockResolvedValue(null);
+    it('should throw UnauthorizedException if password is incorrect', async () => {
+      const signInDto = { email: 'test@example.com', password: 'wrongpass' };
+      const user = { id: 1, email: signInDto.email, password: await bcrypt.hash('testpass', 10) };
+      mockUserService.findOne.mockResolvedValue(user);
 
       await expect(service.signIn(signInDto)).rejects.toThrow(UnauthorizedException);
     });
 
-    it('should throw an error if password is incorrect', async () => {
-      const signInDto: SignInDto = { email: 'test@example.com', password: 'wrongpass' };
-      const user = { id: 1, email: signInDto.email, password: await bcrypt.hash('testpass', 10) };
-      mockUserService.findOne.mockResolvedValue(user);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false);
+    it('should throw UnauthorizedException if user is not found', async () => {
+      const signInDto = { email: 'nonexistent@example.com', password: 'testpass' };
+      mockUserService.findOne.mockResolvedValue(undefined);
 
       await expect(service.signIn(signInDto)).rejects.toThrow(UnauthorizedException);
     });

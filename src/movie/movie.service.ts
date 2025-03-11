@@ -4,13 +4,14 @@ import { Movie } from './entity/movie.entity';
 import { Repository } from 'typeorm';
 import axios from 'axios';
 import { ShareMovieDto } from './dto/share-movie.dto';
-import { ShareGateway } from 'src/gateway/gateway';
+import { ShareGateway } from '../gateway/gateway';
 
 @Injectable()
 export class MovieService {
   constructor(
-      @InjectRepository(Movie) private readonly movieRepository: Repository<Movie>,
-      private readonly shareGateway: ShareGateway,
+    @InjectRepository(Movie)
+    private readonly movieRepository: Repository<Movie>,
+    private readonly shareGateway: ShareGateway,
   ) {}
 
   async find(): Promise<Movie[]> {
@@ -18,9 +19,7 @@ export class MovieService {
     return movies;
   }
 
-  async shareMovie(
-    shareMovieDto: ShareMovieDto
-  ): Promise<boolean> {
+  async shareMovie(shareMovieDto: ShareMovieDto): Promise<boolean> {
     const { url, userId, email } = shareMovieDto;
     try {
       const videoInfo = await this.getVideoInfo(url);
@@ -40,6 +39,7 @@ export class MovieService {
       }
       return true;
     } catch (error) {
+      console.log('🚀 ~ MovieService ~ shareMovie ~ error:', error);
       return false;
     }
   }
@@ -52,6 +52,7 @@ export class MovieService {
       );
       return response.data;
     } catch (error) {
+      console.log('🚀 ~ MovieService ~ getVideoInfo ~ error:', error);
       throw new Error('Failed to fetch video info');
     }
   }

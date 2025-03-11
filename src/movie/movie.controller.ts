@@ -6,9 +6,7 @@ import { AuthGuard } from '../auth/auth.guard';
 
 @Controller('movie')
 export class MovieController {
-  constructor(
-    private readonly movieService: MovieService
-  ) {}
+  constructor(private readonly movieService: MovieService) {}
 
   @Get()
   async findAll(): Promise<Movie[]> {
@@ -24,11 +22,9 @@ export class MovieController {
     const dto: ShareMovieDto = {
       url,
       userId: req.user.sub,
-      email: req.user.email
-    }
-    const shared = await this.movieService.shareMovie(
-      dto
-    );
+      email: req.user.email,
+    };
+    const shared = await this.movieService.shareMovie(dto);
     return shared;
   }
 }
