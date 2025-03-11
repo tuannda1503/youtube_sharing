@@ -22,40 +22,95 @@
   <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-## Description
+# YouTube Sharing System
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Introduction
+The system uploads YouTube videos and shares them to all users logged into the system.
 
-## Installation
+## Prerequisites
+- [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- Node version >= 20
+- Yarn version: 1.22.22
+- Docker
 
-```bash
-$ yarn install
-```
+## Installation & Configuration
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/tuannda1503/youtube_sharing.git
+   ```
+2. Navigate into the project directory:
+   ```bash
+   cd youtube_sharing
+   ```
+3. Copy `.env.example` to `.env` and set the environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+4. Install dependencies:
+   ```bash
+   yarn install
+   ```
+5. Run database migrations:
+   ```bash
+   yarn migrate:run
+   ```
+6. Start the development server:
+   ```bash
+   yarn start:dev
+   ```
+7. Access the application at [localhost:3001](http://localhost:3001) to see "Hello world!".
 
-## Running the app
+## Database Setup
+- Start the database using Docker:
+  ```bash
+  docker compose up -d
+  ```
 
-```bash
-# development
-$ yarn run start
+## Running the Application
+- Run migrations:
+  ```bash
+  yarn migrate:run
+  ```
+- Start the project:
+  ```bash
+  yarn start:dev
+  ```
+  Access the application at [localhost:3001](http://localhost:3001).
 
-# watch mode
-$ yarn run start:dev
+## Docker Deployment
+(Optional for Backend developers)
+- Build the Docker image and run containers:
+  ```bash
+  docker build -t youtube_sharing .
+  docker run -p 3001:3001 youtube_sharing
+  ```
 
-# production mode
-$ yarn run start:prod
-```
+## Usage
+- The application allows users to upload YouTube videos and share them with all logged-in users. Ensure you are logged in to access the sharing features.
+
+## Troubleshooting
+- **Issue**: Cannot connect to the database.
+  - **Solution**: Ensure Docker is running and the database container is up. Use `docker ps` to check running containers.
+
+- **Issue**: Application not starting.
+  - **Solution**: Check if all dependencies are installed correctly. Run `yarn install` again if necessary.
+
+- **Issue**: Migration errors.
+  - **Solution**: Ensure the database is running and accessible. Check the database connection settings in your environment configuration.
+
+For further assistance, please refer to the project's documentation or contact the maintainers.
 
 ## Test
 
 ```bash
 # unit tests
-$ yarn run test
+$ yarn test
 
 # e2e tests
-$ yarn run test:e2e
+$ yarn test:e2e
 
 # test coverage
-$ yarn run test:cov
+$ yarn test:cov
 ```
 
 ## Support
