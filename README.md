@@ -33,6 +33,12 @@ The system uploads YouTube videos and shares them to all users logged into the s
 - Yarn version: 1.22.22
 - Docker
 
+## Database Setup (run first to config database)
+- Start the database using Docker:
+  ```bash
+  docker compose up -d
+  ```
+
 ## Installation & Configuration
 1. Clone the repository:
    ```bash
@@ -59,12 +65,6 @@ The system uploads YouTube videos and shares them to all users logged into the s
    yarn start:dev
    ```
 7. Access the application at [localhost:3001](http://localhost:3001) to see "Hello world!".
-
-## Database Setup
-- Start the database using Docker:
-  ```bash
-  docker compose up -d
-  ```
 
 ## Running the Application
 - Run migrations:
