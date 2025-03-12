@@ -18,7 +18,9 @@ export class AuthService {
     private readonly userService: UserService,
   ) {}
 
-  async signUp(signUpDto: SignUpDto): Promise<any> {
+  async signUp(
+    signUpDto: SignUpDto,
+  ): Promise<{ access_token: string; email: string }> {
     const { email, password } = signUpDto;
     const hashedPassword = await bcrypt.hash(password, this.saltRounds);
 
@@ -55,7 +57,7 @@ export class AuthService {
         email,
       };
     } else {
-      await this.signUp(signInDto);
+      return await this.signUp(signInDto);
     }
   }
 }
